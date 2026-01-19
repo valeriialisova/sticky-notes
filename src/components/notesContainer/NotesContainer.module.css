@@ -1,0 +1,15 @@
+.notesContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  background-color: #e0f7fa;
+}
+
+.notesSectionWrapper {
+  flex: 1;
+  position: relative;
+  width: 100%;
+}

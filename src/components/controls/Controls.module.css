@@ -1,0 +1,23 @@
+.controls {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #ccc;
+}
+
+.addButton {
+  padding: 0.5rem 2rem;
+  font-size: 16px;
+  font-weight: 600;
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.addButton:hover {
+  background-color: #357abd;
+}
