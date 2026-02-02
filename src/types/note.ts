@@ -1,10 +1,16 @@
-export type NotePosition = { x: number; y: number };
-export type NoteSize = { width: number; height: number };
+export interface NotePosition {
+  x: number;
+  y: number;
+}
+export interface NoteSize {
+  width: number;
+  height: number;
+}
 
-export type NoteType = {
+export interface NoteType {
   id: string;
   content: string;
   position: NotePosition;
   size: NoteSize;
   zIndex: number;
-};
+}

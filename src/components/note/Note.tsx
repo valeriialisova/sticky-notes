@@ -1,26 +1,26 @@
-import { useRef, memo, useEffect } from "react";
-import { type NoteType } from "../../types/note";
+import { useRef, memo } from "react";
 import styles from "./Note.module.css";
+import { NoteType } from "../../types/note";
 
 const MIN_WIDTH = 200;
 const MIN_HEIGHT = 100;
 const MAX_WIDTH = 500;
 const MAX_HEIGHT = 400;
 
-export type NoteProps = NoteType & {
+export interface NoteProps extends NoteType {
   onChange: (value: string) => void;
   onMove: (id: string, x: number, y: number) => void;
   onResize: (id: string, width: number, height: number) => void;
   onFocus: (id: string) => void;
   onDrop: (mouseX: number, mouseY: number) => void;
-};
+}
 
 const Note = ({
   id,
   content,
   position,
   size,
-  zIndex = 1,
+  zIndex,
   onChange,
   onMove,
   onResize,
@@ -39,21 +39,14 @@ const Note = ({
 
   const rafId = useRef<number | null>(null);
 
-  // Prevent text selection while dragging/resizing
-  const disableUserSelect = () => (document.body.style.userSelect = "none");
-  const enableUserSelect = () => (document.body.style.userSelect = "");
-
-  // Mouse move with requestAnimationFrame
-  const handleMouseMove = (e: MouseEvent) => {
+  const handlePointerMove = (e: PointerEvent) => {
     if (rafId.current) return;
 
     rafId.current = requestAnimationFrame(() => {
       rafId.current = null;
 
       if (isDragging.current) {
-        const x = e.clientX - offset.current.x;
-        const y = e.clientY - offset.current.y;
-        onMove(id, x, y);
+        onMove(id, e.clientX - offset.current.x, e.clientY - offset.current.y);
       }
 
       if (isResizing.current) {
@@ -70,72 +63,56 @@ const Note = ({
     });
   };
 
-  const startListening = () => {
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
+  const handlePointerUp = (e: PointerEvent) => {
+    if (isDragging.current) {
+      onDrop(e.clientX, e.clientY);
+    }
+
+    isDragging.current = false;
+    isResizing.current = false;
+
+    const el = e.currentTarget as HTMLElement;
+    el.releasePointerCapture(e.pointerId);
+    el.onpointermove = null;
+    el.onpointerup = null;
   };
 
-  const stopListening = () => {
-    document.removeEventListener("mousemove", handleMouseMove);
-    document.removeEventListener("mouseup", handleMouseUp);
-  };
-
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).classList.contains(styles.resizeHandler))
       return;
 
     e.stopPropagation();
-    disableUserSelect();
     onFocus(id);
 
     isDragging.current = true;
-    isResizing.current = false;
+    offset.current = {
+      x: e.clientX - position.x,
+      y: e.clientY - position.y,
+    };
 
-    offset.current = { x: e.clientX - position.x, y: e.clientY - position.y };
-    startListening();
+    const el = e.currentTarget;
+    el.setPointerCapture(e.pointerId);
+    el.onpointermove = handlePointerMove;
+    el.onpointerup = handlePointerUp;
   };
 
-  const handleResizeMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleResizePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.stopPropagation();
-    disableUserSelect();
+    onFocus(id);
 
     isResizing.current = true;
-    isDragging.current = false;
-
     resizeStart.current = {
       x: e.clientX,
       y: e.clientY,
       width: size.width,
       height: size.height,
     };
-    onFocus(id);
 
-    startListening();
+    const el = e.currentTarget.parentElement!;
+    el.setPointerCapture(e.pointerId);
+    el.onpointermove = handlePointerMove;
+    el.onpointerup = handlePointerUp;
   };
-
-  const handleMouseUp = (e: MouseEvent) => {
-    if (isDragging.current) onDrop(e.clientX, e.clientY);
-
-    isDragging.current = false;
-    isResizing.current = false;
-    enableUserSelect();
-
-    if (rafId.current) {
-      cancelAnimationFrame(rafId.current);
-      rafId.current = null;
-    }
-
-    stopListening();
-  };
-
-  useEffect(() => {
-    // Cleanup in case component unmounts during drag/resize
-    return () => {
-      enableUserSelect();
-      stopListening();
-      if (rafId.current) cancelAnimationFrame(rafId.current);
-    };
-  }, []);
 
   return (
     <div
@@ -147,8 +124,7 @@ const Note = ({
         height: size.height,
         zIndex,
       }}
-      onMouseDown={handleMouseDown}
-      onClick={(e) => e.stopPropagation()}
+      onPointerDown={handlePointerDown}
     >
       <textarea
         placeholder="Write your note..."
@@ -157,7 +133,7 @@ const Note = ({
       />
       <div
         className={styles.resizeHandler}
-        onMouseDown={handleResizeMouseDown}
+        onPointerDown={handleResizePointerDown}
       />
     </div>
   );

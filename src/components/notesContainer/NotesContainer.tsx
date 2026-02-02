@@ -2,9 +2,9 @@ import { useRef, useState, useCallback } from "react";
 import Controls from "../controls";
 import Note from "../note";
 import TrashZone from "../trashZone";
-import { type NoteType } from "../../types/note";
 import { isOverElement } from "../../utils/position";
 import styles from "./NotesContainer.module.css";
+import { NoteType } from "../../types/note";
 
 const NotesContainer = () => {
   const [notes, setNotes] = useState<NoteType[]>([]);
@@ -23,10 +23,6 @@ const NotesContainer = () => {
     };
   };
 
-  const addNoteAtPosition = useCallback((x: number, y: number) => {
-    setNotes((prev) => [...prev, createNote(x, y)]);
-  }, []);
-
   const handleAddNoteClick = useCallback(() => {
     setNotes((prev) => {
       const offset = prev.length * 10;
@@ -34,15 +30,17 @@ const NotesContainer = () => {
     });
   }, []);
 
-  const handleNotesSectionClick = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleNotesSectionPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
       if (draggingNoteId.current) return;
+
       const rect = e.currentTarget.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-      addNoteAtPosition(x, y);
+
+      setNotes((prev) => [...prev, createNote(x, y)]);
     },
-    [addNoteAtPosition],
+    [],
   );
 
   const bringNoteToFront = useCallback((id: string) => {
@@ -62,7 +60,6 @@ const NotesContainer = () => {
 
   const handleNoteMove = useCallback((id: string, x: number, y: number) => {
     draggingNoteId.current = id;
-
     setNotes((prev) =>
       prev.map((note) =>
         note.id === id ? { ...note, position: { x, y } } : note,
@@ -81,13 +78,13 @@ const NotesContainer = () => {
     [],
   );
 
-  const handleNoteDrop = useCallback((mouseX: number, mouseY: number) => {
+  const handleNoteDrop = useCallback((x: number, y: number) => {
     const id = draggingNoteId.current;
     draggingNoteId.current = null;
 
     if (!id) return;
 
-    if (isOverElement(mouseX, mouseY, trashRef.current)) {
+    if (isOverElement(x, y, trashRef.current)) {
       setNotes((prev) => prev.filter((note) => note.id !== id));
     }
   }, []);
@@ -95,9 +92,10 @@ const NotesContainer = () => {
   return (
     <div className={styles.notesContainer}>
       <Controls onAdd={handleAddNoteClick} />
+
       <div
         className={styles.notesSectionWrapper}
-        onClick={handleNotesSectionClick}
+        onPointerDown={handleNotesSectionPointerDown}
       >
         {notes.map((note) => (
           <Note
@@ -111,6 +109,7 @@ const NotesContainer = () => {
           />
         ))}
       </div>
+
       <TrashZone ref={trashRef} />
     </div>
   );
